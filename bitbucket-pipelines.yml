@@ -1,0 +1,87 @@
+image: atlassian/default-image:3
+
+# Workflow Configuration
+
+pipelines:
+  default:
+    - parallel:
+      - step:
+            name: Validate Templates
+            # image: python:3.9
+            script:
+              - diff=$(git diff --diff-filter=d --name-only origin/master)
+              - pip install cfn-lint
+              - cfn-lint -I $dif
+      - step:
+          name: Validate with AWS
+          image: amazon/aws-cli:2.3.3
+          script:
+            - aws cloudformation validate-template --template-body $diff
+
+  branches:
+    master:
+      - parallel:
+        - step:
+            name: Security Scan
+            script:
+              # Run a security scan for sensitive data.
+              # See more security tools at https://bitbucket.org/product/features/pipelines/integrations?&category=security
+              - pipe: atlassian/git-secrets-scan:0.5.1
+        - step:
+            name: Deploy Bucket to cloudformation
+            script:
+              # Deploy your configuration as code using AWS CloudFormation.
+              # See more details https://bitbucket.org/atlassian/aws-cloudformation-deploy
+              - pipe: atlassian/aws-cloudformation-deploy:0.15.2
+                variables:
+                  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                  AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                  STACK_NAME: 'aws-cloud-vpc-codeiac-s3'
+                  TEMPLATE: './s3/bucket-iac.yaml'
+                  WAIT: 'true'
+                  STACK_PARAMETERS: >
+                    [
+                    {
+                      "ParameterKey": "pEnvironment",
+                      "ParameterValue": "dev"
+                    }
+                    ]
+        - step:
+            name: Upload Code to S3
+            script:
+              - pipe: atlassian/aws-s3-deploy:0.3.8
+                variables:
+                  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                  AWS_DEFAULT_REGION: 'us-east-1'
+                  S3_BUCKET: 'aws-cloud-templates-dev-s3'
+                  LOCAL_PATH: './'
+
+        - step:
+            name: Deploy to Development
+            deployment: dev
+            trigger: manual
+            script:
+              # Deploy your configuration as code using AWS CloudFormation.
+              # See more details https://bitbucket.org/StackName/aws-cloudformation-deploy
+              - pipe: atlassian/aws-cloudformation-deploy:0.15.2
+                variables:
+                  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                  AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                  STACK_NAME: 'aws-cloud-vpc'
+                  TEMPLATE: './root.yml'
+                  WAIT: 'true'
+                  CAPABILITIES: ['CAPABILITY_IAM']
+                  STACK_PARAMETERS: >
+                    [
+                    {
+                      "ParameterKey": "pEnvironment",
+                      "ParameterValue": "dev"
+                    },
+                    {
+                      "ParameterKey": "pBucket",
+                      "ParameterValue": "aws-cloud-templates-dev-s3"
+                    }
+                    ]

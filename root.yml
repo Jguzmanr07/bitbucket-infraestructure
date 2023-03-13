@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Template para infraestructura Single Sign On Aws Audit Payválida.
+
+Parameters:
+  pBucket:
+    Description: Nombre del bucket con los datos de infraestructura
+    Type: String
+    Default: "aws-cloud-templates-dev-s3"
+
+  pEnvironment:
+    Description: Nombre del bucket con los datos de infraestructura
+    Type: String
+
+Resources:
+ #----------------------- AWS Resources -----------------------------------------#
+
+  rS3buckets:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${pBucket}/s3/buckets.yaml
+      Parameters:
+        pEnvironment: !Ref pEnvironment

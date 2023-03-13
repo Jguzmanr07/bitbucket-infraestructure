@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+    S3 Bucket para almacenar pdf de correos de domina digital..
+
+Parameters:
+  pEnvironment:
+    Description: An environment name that is prefixed to resource names AWS Account
+    Type: String
+
+Resources:
+
+  rS3Recursos: 
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      AccessControl: Private
+      BucketEncryption:
+       ServerSideEncryptionConfiguration:
+         - ServerSideEncryptionByDefault:
+             SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        IgnorePublicAcls: false
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
+      BucketName: !Sub "aws-cloud-${pEnvironment}-s3"
+      Tags:
+        - Key: Name
+          Value:  !Sub "aws-cloud-${pEnvironment}-s3"

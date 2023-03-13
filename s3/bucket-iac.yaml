@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+ This template deploy all required S3 buckets for this app, files, scripts for account aws audit Payvalida..
+ 
+
+Parameters:
+  pEnvironment:
+    Description: Nombre ambiente
+    Type: String
+    
+Resources:
+  rS3BucketTransversal:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join ["-", [aws, cloud, templates, !Ref pEnvironment, s3]]
+      Tags:
+        - Key: Description
+          Value: Templates
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: "AES256"
+      # LoggingConfiguration:
+      #   DestinationBucketName: !Join ["-", ["s3bucketlogs", !Ref pEnvironment]]
+      #   LogFilePrefix: AWSLogs/rS3BucketAudit-logs
+
+  # rS3BucketTransversalPolicy:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties: 
+  #     Bucket: 
+  #       Ref: rS3BucketTransversal
+  #     PolicyDocument:
+  #       Statement:
+  #       - Sid: AllowSSLRequestsOnly
+  #         Effect: Deny
+  #         Principal: "*"
+  #         Action: s3:*
+  #         Resource:
+  #         - !Join ['', ['arn:aws:s3:::', !Ref 'rS3BucketTransversal']]
+  #         - !Join ['', ['arn:aws:s3:::', !Ref 'rS3BucketTransversal', /*]]
+  #         Condition:
+  #           Bool:
+  #             aws:SecureTransport: 'false'
+      
+  # rS3LogsBucket:
+  #   Type: AWS::S3::Bucket
+  #   Properties:
+  #     VersioningConfiguration:
+  #       Status: Enabled
+  #     AccessControl: Private
+  #     BucketEncryption:
+  #       ServerSideEncryptionConfiguration:
+  #         - ServerSideEncryptionByDefault:
+  #             SSEAlgorithm: AES256
+  #     PublicAccessBlockConfiguration:
+  #       BlockPublicAcls: true
+  #       IgnorePublicAcls: true
+  #       BlockPublicPolicy: true
+  #       RestrictPublicBuckets: true
+  #     LoggingConfiguration:
+  #       DestinationBucketName: !Join ["-", ["s3bucketlogs", !Ref pEnvironment]]
+  #       LogFilePrefix: AWSLogs/rS3LogsBucket-logs
+  #     BucketName: !Join ["-", ["s3bucketlogs", !Ref pEnvironment]]
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Join ["-", ["s3bucketlogs", !Ref pEnvironment]]
+
+  # rS3BucketPolicyLogs:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties:
+  #     Bucket:
+  #       Ref: rS3LogsBucket
+  #     PolicyDocument:
+  #       Statement:
+  #         -
+  #           Sid: "AWSlogDeliveryWrite"
+  #           Effect: "Allow"
+  #           Principal:
+  #             Service: "delivery.logs.amazonaws.com"
+  #           Action: "s3:PutObject"
+  #           Resource:
+  #             Fn::Join:
+  #               - ""
+  #               -
+  #                 - !GetAtt rS3LogsBucket.Arn
+  #                 - "/AWSLogs/"
+  #                 - !Ref AWS::AccountId
+  #                 - "/*"
+  #           Condition:
+  #             StringEquals:
+  #               s3:x-amz-acl:
+  #                 bucket-owner-full-control
+
+Outputs:
+  oS3Bucket:
+    Description: Id del bucket creado
+    Value: !Ref rS3BucketTransversal
+
+  # oS3LogsBucket:
+  #   Description: Id del bucket creado
+  #   Value: !Ref rS3LogsBucket
